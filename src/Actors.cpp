@@ -107,6 +107,10 @@ StringActor::StringActor(string newName){
   id = newName;
 }
 
+SquareOpActor::SquareOpActor(string newName){
+  id = newName;
+}
+
 
 void NumericActor::PerformOperation(const Message& msg) {
   /*
@@ -130,6 +134,14 @@ void StringActor::PerformOperation(const Message& msg) {
   cout << "[" << id << "]" << " StringActor Operation Resulted in String: " << storedValue << endl;
 }
 
+void SquareOpActor::PerformOperation(const Message& msg){
+  if (msg.type != ValueType::INTEGER)
+     return;
+  /*
+   * Create for loop that creates (message number) of children and have them run the square operation and return
+   */
+}
+
 void NumericActor::Store(const Message& msg){
   if (msg.type == ValueType::INTEGER) {
       storedValue = static_cast<const IntegerMessage&>(msg).value;
@@ -141,6 +153,13 @@ void StringActor::Store(const Message& msg){
   if (msg.type == ValueType::STRING) {
       storedValue = static_cast<const StringMessage&>(msg).value;
       cout << "[" << id << "]" << " StringActor::Store : Stored value is now " << storedValue << endl;
+  }
+}
+
+void SquareOpActor::Store(const Message& msg){
+  if (msg.type == ValueType::INTEGER) {
+      storedValue = static_cast<const IntegerMessage&>(msg).value;
+      cout << "[" << id << "]" << " SquareOpActor::Store : Stored value is now " << storedValue << endl;
   }
 }
 
@@ -199,6 +218,31 @@ void StringActor::Send(const Message& msg){
     returnActor->mailBox.Enqueue("result", vType, v, id);
   }
 }
+
+void SquareOpActor::Send(const Message& msg){
+  BaseActor* returnActor = ActorList::getInstance().GetActor(msg.sentObjectID);
+    if(returnActor == nullptr){
+      // we are sending down by creating a new actor
+      string newName = "NewNumericActor" + to_string(rand());
+      NumericActor* newActor = new NumericActor(newName);
+      ActorList::getInstance().AddActor(newActor, newName);
+      newActor->Start();
+      // Send a message to the new actor
+      ValueType vType = ValueType::INTEGER;
+      Val v;
+      v.i = (storedValue % 10) + 2;
+      cout << "[" << id << "]" << " Sending New Numerical Actor the result of operation: (" << storedValue << " % 10) + 2" << endl;
+      newActor->mailBox.Enqueue("store", vType, v, id);
+    }else{
+      // we are sending up by referencing past actor
+      // This actor should not report anything back to the sending actor
+    }
+}
+
+
+/*
+ * ActorList methods
+ */
 
 void ActorList::AddActor(BaseActor * actor, string name){
   if (actorList.find(name) == actorList.end()) { // eclipse hates map, don't worry

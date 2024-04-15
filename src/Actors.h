@@ -103,6 +103,18 @@ public:
   void Store(const Message& msg) override;
   void Send(const Message& msg) override;
 };
+/*
+ * Given number, (x), creates x int actors that multiple the value received by itself;
+ */
+class SquareOpActor : public BaseActor {
+private:
+  int storedValue = 0;
+public:
+  SquareOpActor(string newName);
+  void PerformOperation(const Message& msg) override;
+  void Store(const Message& msg) override;
+  void Send(const Message& msg) override;
+};
 
 
 /*
@@ -153,6 +165,9 @@ public:
   ~StringMessage() {}
 };
 
+/*
+ * THIS IS UNUSED CLASS!!!
+ */
 class ObjectMessage : public Message {
 public:
   BaseActor* value; // TODO: Change to a pointer to a real object later :) (class not made yet -- > actor class)
