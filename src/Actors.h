@@ -12,6 +12,9 @@
 #include <mutex>
 #include <map>
 #include <thread>
+#include <algorithm>
+#include <random>
+
 /*
  * Each instantiation and full specialization of
  * std::atomic<> represents a type that different threads can
@@ -25,7 +28,8 @@
  * These clocks are used to measure time in various ways.
  */
 #include <chrono>
-
+#include <unordered_map>
+#include <functional> // function
 
 #ifndef ACTORS_H_
 #define ACTORS_H_
@@ -50,41 +54,54 @@ public:
    * each actor has it's own mailbox
    */
   MailBox mailBox;
+  // quick lookup for message ID's
+  /*
+   * function<void(const Message&)> can hold any function or function object that matches the specifications
+   * In this case, it takes a const Message& argument and returns nothing
+   */
+  unordered_map<string, function<void(const Message&)>> messageHandlers;
+
   // a thread reading this value will get a value before being changed or the value after, avoids errors
   // turns out threads wont be affecting this sooooo
   atomic<bool> running; // flag to control the actor thread
   virtual void PerformOperation(const Message& msg) = 0;
   virtual void Store(const Message& msg) = 0;
-  virtual void Send() = 0;
+  virtual void Send(const Message& msg) = 0;
   void Start();
   void Stop();
   virtual void processMessages();
 
-  BaseActor() : running(false) {}
+protected:
+  string id;
+  int childIndexer;
+
+  BaseActor() : running(false), childIndexer(0) {
+    messageHandlers["store"] = [this](const Message& msg) { this->Store(msg); };
+    messageHandlers["send"] = [this](const Message& msg) { this->Send(msg); };
+    messageHandlers["op"] = [this](const Message& msg) { this->PerformOperation(msg); };
+  }
   virtual ~BaseActor() {}
 };
 
 class NumericActor : public BaseActor {
 private:
   int storedValue = 0;
-  string id;
 public:
   NumericActor(string newName);
   void PerformOperation(const Message& msg) override;
   void Store(const Message& msg) override;
-  void Send() override;
+  void Send(const Message& msg) override;
 };
 
 class StringActor : public BaseActor {
 private:
-  string id;
   string storedValue = "";
 
 public:
   StringActor(string newName);
   void PerformOperation(const Message& msg) override;
   void Store(const Message& msg) override;
-  void Send() override;
+  void Send(const Message& msg) override;
 };
 
 
@@ -103,6 +120,7 @@ class Message{
 public:
   string id;
   ValueType type;
+  string sentObjectID;
   virtual void printValue() = 0;
   virtual ~Message() {}
 };
@@ -110,12 +128,13 @@ public:
 class IntegerMessage : public Message {
 public:
   int value;
-  IntegerMessage(string id, int value, ValueType vType) : value(value) {
+  IntegerMessage(string id, int value, ValueType vType, string objID) : value(value) {
     this->id = id;
     this->type = vType;
+    this->sentObjectID = objID;
   }
   void printValue() override {
-    cout << "Integer value: " << value << endl;
+    cout << value << endl;
   }
   ~IntegerMessage() {}
 };
@@ -123,12 +142,13 @@ public:
 class StringMessage : public Message {
 public:
   string value;
-  StringMessage(string id, string value, ValueType vType) : value(value) {
+  StringMessage(string id, string value, ValueType vType, string objID) : value(value) {
     this->id = id;
     this->type = vType;
+    this->sentObjectID = objID;
   }
   void printValue() override {
-    cout << "String value: " << value << endl;
+    cout << value << endl;
   }
   ~StringMessage() {}
 };
@@ -148,12 +168,25 @@ public:
 
 class ActorList{
 public:
-  map<string ,BaseActor *> actorList;
-  void AddActor(BaseActor * actor, string name);
-  void RemoveActor(string key);
+    static ActorList& getInstance() {
+      static ActorList instance;
+      return instance;
+    }
+
+    void AddActor(BaseActor* actor, string name);
+    void RemoveActor(string key);
+    BaseActor* GetActor(string key);
+    map<string, BaseActor*> actorList;
+
+private:
+  // private to prevent instantiation
+  ActorList() {}
+  // Make copy constructor and assignment operator private to prevent cloning
+  // deleting copy constructor
+  // https://www.geeksforgeeks.org/implementation-of-singleton-class-in-cpp/
+  ActorList(const ActorList&) = delete;
+  ActorList& operator=(const ActorList&) = delete;
 };
 
-
-ActorList * GetActorList();
 
 #endif /* ACTORS_H_ */

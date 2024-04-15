@@ -31,7 +31,7 @@ public:
   queue<Message *> q;
   mutex m;
   Message * Pop();
-  void Enqueue(string id, ValueType vType, Val v);
+  void Enqueue(string id, ValueType vType, Val v, string objID);
 };
 
 

@@ -23,27 +23,28 @@ int main() {
   numericActor.Start();
   stringActor.Start();
 
-  // Create an actor list
-  ActorList actorList;
-
-  // Add actors to the actor list
-  actorList.AddActor(&numericActor, "numeric_actor");
-  actorList.AddActor(&stringActor, "string_actor");
+  // Add actors to the actor list in the singleton class
+  ActorList::getInstance().AddActor(&numericActor, "numeric_actor");
+  ActorList::getInstance().AddActor(&stringActor, "string_actor");
 
   // Enqueue test messages
   Val v1;
   Val v2;
-  v1.i = 10;
+  v1.i = 7;
   v2.s = "hello";
-  numericActor.mailBox.Enqueue("numeric_actor", ValueType::INTEGER, v1);
-  stringActor.mailBox.Enqueue("string_actor", ValueType::STRING, v2);
-
+  numericActor.mailBox.Enqueue("store", ValueType::INTEGER, v1, "none");
+  stringActor.mailBox.Enqueue("store", ValueType::STRING, v2, "none");
+  v1.i = 15;
+  numericActor.mailBox.Enqueue("op", ValueType::INTEGER, v1, "none");
+  numericActor.mailBox.Enqueue("send", ValueType::INTEGER, v1, "none");
   // Wait for a while to allow actors to process messages
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
   // Stop the actor threads
-  numericActor.Stop();
-  stringActor.Stop();
+  auto& actorList = ActorList::getInstance().actorList;
+  for (const auto& pair : actorList) {
+    pair.second->Stop();
+  }
 
   return 0;
 }
