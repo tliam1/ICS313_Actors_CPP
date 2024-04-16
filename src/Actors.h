@@ -39,7 +39,6 @@ using namespace std;
 class Message;
 class IntegerMessage;
 class StringMessage;
-class ObjectMessage;
 class MailBox;
 #include "MailBox.h" // Include MailBox after forward declaration
 
@@ -134,6 +133,7 @@ public:
   ValueType type;
   string sentObjectID;
   virtual void printValue() = 0;
+  virtual string GetValue() = 0;
   virtual ~Message() {}
 };
 
@@ -147,6 +147,10 @@ public:
   }
   void printValue() override {
     cout << value << endl;
+  }
+
+  string GetValue() override{
+    return to_string(value);
   }
   ~IntegerMessage() {}
 };
@@ -162,23 +166,10 @@ public:
   void printValue() override {
     cout << value << endl;
   }
+  string GetValue() override{
+    return value;
+  }
   ~StringMessage() {}
-};
-
-/*
- * THIS IS UNUSED CLASS!!!
- */
-class ObjectMessage : public Message {
-public:
-  BaseActor* value; // TODO: Change to a pointer to a real object later :) (class not made yet -- > actor class)
-  ObjectMessage(string id, BaseActor* value, ValueType vType) : value(value){
-    this->id = id;
-    this->type = vType;
-  }
-  void printValue() override {
-    cout << "Object type: " << endl;
-  }
-  ~ObjectMessage(){}
 };
 
 class ActorList{

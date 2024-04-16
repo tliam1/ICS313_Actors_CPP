@@ -23,9 +23,6 @@ void MailBox::Enqueue(string id, ValueType vType, Val v, string objID){
     case ValueType::STRING:
         newMsg = new StringMessage(id, v.s, vType, objID);
         break;
-    case ValueType::OBJECT:
-        newMsg = new ObjectMessage(id, v.bA, vType);
-        break;
   }
   if (newMsg != nullptr) {
     q.push(newMsg);
@@ -137,9 +134,18 @@ void StringActor::PerformOperation(const Message& msg) {
 void SquareOpActor::PerformOperation(const Message& msg){
   if (msg.type != ValueType::INTEGER)
      return;
-  /*
-   * Create for loop that creates (message number) of children and have them run the square operation and return
-   */
+  int readValue = static_cast<const IntegerMessage&>(msg).value;
+  int readValueSquared = readValue * readValue;
+  BaseActor* returnActor = ActorList::getInstance().GetActor(msg.sentObjectID);
+  if(returnActor != nullptr){
+    ValueType vType = ValueType::INTEGER;
+    Val v;
+    v.i = readValueSquared;
+    returnActor->mailBox.Enqueue("result", vType, v, "none");
+    cout << "[" << id << "]" << " Returning the results of operation: " << readValue << "*" << readValue << " to sender" << endl;
+  }else{
+    cout << "[" << id << "]" << " Results of operation: " << readValue << "*" << readValue << " is :" << readValueSquared << endl;
+  }
 }
 
 void NumericActor::Store(const Message& msg){
@@ -186,6 +192,7 @@ void NumericActor::Send(const Message& msg){
     ValueType vType = ValueType::INTEGER;
     Val v;
     v.i = storedValue;
+    cout << "[" << id << "]" << " Sending Stored value back to sender " << msg.sentObjectID << endl;
     returnActor->mailBox.Enqueue("result", vType, v, "none");
   }
 }
@@ -221,8 +228,9 @@ void StringActor::Send(const Message& msg){
 
 void SquareOpActor::Send(const Message& msg){
   BaseActor* returnActor = ActorList::getInstance().GetActor(msg.sentObjectID);
-    if(returnActor == nullptr){
-      // we are sending down by creating a new actor
+  if(returnActor == nullptr){
+    // we are sending down by creating a new actor
+    while(storedValue > 0){
       string newName = "NewNumericActor" + to_string(rand());
       NumericActor* newActor = new NumericActor(newName);
       ActorList::getInstance().AddActor(newActor, newName);
@@ -230,13 +238,16 @@ void SquareOpActor::Send(const Message& msg){
       // Send a message to the new actor
       ValueType vType = ValueType::INTEGER;
       Val v;
-      v.i = (storedValue % 10) + 2;
-      cout << "[" << id << "]" << " Sending New Numerical Actor the result of operation: (" << storedValue << " % 10) + 2" << endl;
-      newActor->mailBox.Enqueue("store", vType, v, id);
-    }else{
-      // we are sending up by referencing past actor
-      // This actor should not report anything back to the sending actor
+      v.i = storedValue;
+      cout << "[" << id << "]" << " Sending New Numerical Actor the value to square: (" << v.i << ")" << endl;
+      newActor->mailBox.Enqueue("store", vType, v, "none");
+      newActor->mailBox.Enqueue("op", vType, v, id);
+      storedValue--;
     }
+  }else{
+    // we are sending up by referencing past actor
+    // This actor should not report anything back to the sending actor
+  }
 }
 
 
